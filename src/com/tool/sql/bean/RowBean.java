@@ -1,26 +1,23 @@
 package com.tool.sql.bean;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RowBean {
-	private int index;
 	private int length;
-	private String[] rows;
-	public int getIndex() {
-		return index;
-	}
-	public void setIndex(int index) {
-		this.index = index;
-	}
+	private List<String> rows = new ArrayList<>();
 	public int getLength() {
 		return length;
 	}
 	public void setLength(int length) {
 		this.length = length;
 	}
-	public String[] getRows() {
+	public List<String> getRows() {
 		return rows;
 	}
-	public void setRows(String[] rows) {
+	public void setRows(List<String> rows) {
 		this.rows = rows;
 	}
+	
 	
 }
