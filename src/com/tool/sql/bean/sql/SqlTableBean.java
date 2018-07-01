@@ -1,4 +1,4 @@
-package com.tool.sql.bean;
+package com.tool.sql.bean.sql;
 
 import java.util.ArrayList;
 import java.util.List;

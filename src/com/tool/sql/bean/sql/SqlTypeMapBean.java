@@ -1,15 +1,15 @@
-package com.tool.sql.bean;
+package com.tool.sql.bean.sql;
 
 public class SqlTypeMapBean {
-	private String sqlType;
+	private SqlType sqlType;
 	private String jdbcType;
 	private String ibaitsType;
 	private String hsqlType;
 	private String javaType;
-	public String getSqlType() {
+	public SqlType getSqlType() {
 		return sqlType;
 	}
-	public void setSqlType(String sqlType) {
+	public void setSqlType(SqlType sqlType) {
 		this.sqlType = sqlType;
 	}
 	public String getJdbcType() {

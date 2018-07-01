@@ -1,6 +1,6 @@
 package com.tool.sql.util;
 
-import com.tool.sql.bean.SqlTableBean;
+import com.tool.sql.bean.sql.SqlTableBean;
 
 public class SqlUtil {
 	public static String toCreateTable(SqlTableBean table,String dbType) {

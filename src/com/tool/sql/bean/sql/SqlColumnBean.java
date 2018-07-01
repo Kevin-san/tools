@@ -1,23 +1,23 @@
-package com.tool.sql.bean;
+package com.tool.sql.bean.sql;
 
 public class SqlColumnBean {
 	private String name;
-	private String type;
+	private SqlType type;
 	public String getName() {
 		return name;
 	}
 	public void setName(String name) {
 		this.name = name;
 	}
-	public String getType() {
+	public SqlType getType() {
 		return type;
 	}
-	public void setType(String type) {
+	public void setType(SqlType type) {
 		this.type = type;
 	}
 	@Override
 	public String toString() {
-		return "SqlColumnBean [name=" + name + ", type=" + type + "]";
+		return "SqlColumnBean [name=" + name + ", type=" + type.toString() + "]";
 	}
 	
 }

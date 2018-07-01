@@ -1,18 +1,18 @@
-package com.tool.sql.bean;
+package com.tool.sql.bean.java;
 
 public class JavaPropertyBean {
 	private String name;
-	private String type;
+	private JavaType type;
 	public String getName() {
 		return name;
 	}
 	public void setName(String name) {
 		this.name = name;
 	}
-	public String getType() {
+	public JavaType getType() {
 		return type;
 	}
-	public void setType(String type) {
+	public void setType(JavaType type) {
 		this.type = type;
 	}
 	@Override
