@@ -1,0 +1,124 @@
+package map.feed.to.column.helper;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import map.feed.to.column.bean.ColumnMapBean;
+import map.feed.to.column.bean.FileMapTableBean;
+import map.feed.to.column.cons.Constants;
+import map.feed.to.column.cons.FunctionException;
+import map.feed.to.column.util.CommonUtil;
+
+public class FixedLengthHelper {
+	private static Logger logger = Logger.getLogger(FixedLengthHelper.class);
+	protected static List<Integer> getLength(FileMapTableBean csvMapTableBean) {
+		List<Integer> lengths = new ArrayList<>();
+		for (ColumnMapBean bean : csvMapTableBean.getColumns()) {
+			if (bean.getIndexOrLength() != null) {
+				lengths.add(bean.getIndexOrLength());
+			}
+		}
+		return lengths;
+	}
+
+	public static String[] getFixedLengthLine(String line, FileMapTableBean fileMapTableBean) {
+		String[] values = null;
+		byte[] original = null;
+		try {
+			original = line.getBytes(fileMapTableBean.getEncoding());
+			values = readLineToArray(original, getLength(fileMapTableBean), fileMapTableBean.getEncoding());
+		} catch (UnsupportedEncodingException e) {
+			logger.error(e.getMessage(), e);
+		}
+		return values;
+	}
+
+	public static byte[] copyOfRange(byte[] original, int from, int to) {
+		int newLength = to - from;
+		if (newLength < 0)
+			throw new IllegalArgumentException(from + " > " + to);
+		byte[] copy = new byte[newLength];
+		System.arraycopy(original, from, copy, 0, Math.min(original.length - from, newLength));
+		return copy;
+	}
+
+	public static String[] readLineToArray(byte[] original, List<Integer> varList, String encoding) {
+		int begin = 0;
+		int end = 0;
+		int lineLength = original.length;
+		int length = varList.size();
+		String[] columnValues = new String[length];
+		byte[][] byteArray = new byte[length][];
+		for (int i = 0; i < length; i++) {
+			columnValues[i] = "";
+			if (begin < lineLength) {
+				end += varList.get(i);
+				end = end > lineLength ? lineLength : end;
+				byteArray[i] = copyOfRange(original, begin, end);
+				try {
+					columnValues[i] = new String(byteArray[i], encoding);
+				} catch (UnsupportedEncodingException e) {
+					logger.error(e);
+				}
+				columnValues[i] = columnValues[i].trim();
+				begin = end;
+			}
+		}
+		return columnValues;
+	}
+	public static List<String[]> getListArrayFromFixedLenghtFilePath(FileMapTableBean fileMapTableBean,FunctionHelper helper) {
+		List<String[]> result = new ArrayList<>();
+		String filePath = fileMapTableBean.getFileName();
+		int beginRow = Integer.parseInt(fileMapTableBean.getBeginRow());
+
+		logger.info("Get parameters from path:" + filePath + ",begin from" + beginRow);
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new FileInputStream(new File(filePath)), fileMapTableBean.getEncoding()));) {
+			String string = null;
+			while ((string = reader.readLine()) != null) {
+				String[] arr = getFixedLengthLine(string, fileMapTableBean);
+				helper.convert2CorrectArray(arr);
+				if (CommonUtil.isNotEmpty(arr)) {
+					logger.info("File parameters:" + Arrays.toString(arr));
+					result.add(arr);
+				}
+			}
+		} catch (IOException e) {
+			logger.error(Constants.IO_EXCEPTION, e);
+		}catch (FunctionException e) {
+			logger.error(e);
+		}
+		logger.info("Finish getting parameters from path:" + filePath + ",begin from row:" + beginRow);
+		return result;
+	}
+	public static List<String[]> getListArrayFromFixedLenghtFilePath(FileMapTableBean fileMapTableBean) {
+		List<String[]> result = new ArrayList<>();
+		String filePath = fileMapTableBean.getFileName();
+		int beginRow = Integer.parseInt(fileMapTableBean.getBeginRow());
+
+		logger.info("Get parameters from path:" + filePath + ",begin from" + beginRow);
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new FileInputStream(new File(filePath)), fileMapTableBean.getEncoding()));) {
+			String string = null;
+			while ((string = reader.readLine()) != null) {
+				String[] arr = getFixedLengthLine(string, fileMapTableBean);
+				logger.info("File parameters:" + Arrays.toString(arr));
+				result.add(arr);
+			}
+		} catch (IOException e) {
+			logger.error(Constants.IO_EXCEPTION, e);
+		}
+		logger.info("Finish getting parameters from path:" + filePath + ",begin from row:" + beginRow);
+		return result;
+	}
+	private FixedLengthHelper(){}
+}
