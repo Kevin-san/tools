@@ -1,0 +1,200 @@
+package map.feed.to.column.helper;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+
+import map.feed.to.column.bean.ColumnMapBean;
+import map.feed.to.column.bean.FileMapTableBean;
+import map.feed.to.column.cons.Constants;
+import map.feed.to.column.cons.FunctionException;
+import map.feed.to.column.util.CommonUtil;
+
+public class CsvHelper {
+	private static Logger logger = Logger.getLogger(CsvHelper.class);
+
+	protected static boolean isOddStartQuota(String dataCell) {
+		int quotaCount = 0;
+		if (dataCell.charAt(0) == Constants.QUATO) {
+			quotaCount++;
+		}
+		return CommonUtil.isOddNum(quotaCount);
+	}
+
+	protected static boolean isOddEndQuota(String dataCell) {
+		int quotaCount = 0;
+		int lastIndex = dataCell.length() - 1;
+		if (dataCell.charAt(lastIndex) == Constants.QUATO) {
+			quotaCount++;
+		}
+		return CommonUtil.isOddNum(quotaCount);
+	}
+
+	protected static boolean isOddQuotaCount(String dataLine) {
+		int quotaCount = getQuatoCount(dataLine);
+		return CommonUtil.isOddNum(quotaCount);
+	}
+
+	protected static int getQuatoCount(String dataLine) {
+		int quotaCount = 0;
+		for (int i = 0; i < dataLine.length(); i++) {
+			if (dataLine.charAt(i) == Constants.QUATO) {
+				quotaCount++;
+			}
+		}
+		return quotaCount;
+	}
+
+	protected static boolean isZeroQuotaCount(String dataLine) {
+		return getQuatoCount(dataLine) == 0;
+	}
+
+	public static boolean isOddQuotaCount(String dataLine, char seperator) {
+		int quotaCount = 0;
+		for (int i = 0; i < dataLine.length(); i++) {
+			if (seperator == dataLine.charAt(i)) {
+				quotaCount++;
+			}
+		}
+		return CommonUtil.isOddNum(quotaCount);
+	}
+
+	public static String[] getCsvLine(String dataLine,String keyStr) {
+		if (isOddQuotaCount(dataLine)) {
+			logger.info("Invalid Csv format:" + dataLine);
+			return new String[0];
+		}
+		String splitChar = Constants.MAP_CONVS.containsKey(keyStr)?Constants.MAP_CONVS.get(keyStr):keyStr;
+		if (isZeroQuotaCount(dataLine)) {
+			return dataLine.split(splitChar);
+		}
+		return getSpecCsvLine(dataLine,splitChar);
+	}
+
+	public static String[] getSpecCsvLine(String dataLine,String splitChar) {
+		String[] dataArray = dataLine.split(splitChar);
+		List<String> results = new ArrayList<>();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < dataArray.length; i++) {
+			String cell = dataArray[i];
+			if (isValidQuatoCell(cell) || isValidCell(cell)) {
+				results.add(replaceAllQuato(cell));
+			} else {
+				if (isOddStartQuota(cell)) {
+					sb.append(replaceAllQuato(cell + splitChar));
+				} else if (isOddEndQuota(cell)) {
+					sb.append(replaceAllQuato(cell));
+					results.add(sb.toString());
+					sb = new StringBuilder();
+				} else {
+					sb.append(cell + splitChar);
+				}
+			}
+		}
+		return results.toArray(new String[results.size()]);
+	}
+
+	public static String replaceAllQuato(String cell) {
+		return cell.replaceAll(Constants.QUATO + Constants.BLANK, Constants.BLANK);
+	}
+
+	public static boolean isValidCell(String cell) {
+		return !isOddStartQuota(cell) && !isOddEndQuota(cell);
+	}
+
+	public static boolean isValidQuatoCell(String cell) {
+		return isOddStartQuota(cell) && isOddEndQuota(cell);
+	}
+
+	protected static List<Integer> getIndex(FileMapTableBean csvMapTableBean) {
+		List<Integer> indexes = new ArrayList<>();
+		for (ColumnMapBean bean : csvMapTableBean.getColumns()) {
+			if (bean.getIndexOrLength() != null) {
+				indexes.add(bean.getIndexOrLength());
+			}
+		}
+		return indexes;
+	}
+	public static List<String[]> getListArrayFromCsvPath(FileMapTableBean fileMapTableBean) {
+		List<String[]> result = new ArrayList<>();
+		String csvPath = fileMapTableBean.getFileName();
+		int beginRow = Integer.parseInt(fileMapTableBean.getBeginRow());
+
+		logger.info("Get parameters from path:" + csvPath + ",begin from " + beginRow);
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new FileInputStream(new File(csvPath)), fileMapTableBean.getEncoding()));) {
+			String string = null;
+			int count = 0;
+			while ((string = reader.readLine()) != null) {
+				count++;
+				String[] arr = getCsvLine(string,fileMapTableBean.getDelimiter());
+				if (beginRow > count || isInvalidLine(arr, fileMapTableBean)) {
+					continue;
+				}
+				logger.info("File parameters:" + Arrays.toString(arr));
+				result.add(arr);
+			}
+		} catch (IOException e) {
+			logger.error(Constants.IO_EXCEPTION, e);
+		}
+		logger.info("Finish getting parameters from path:" + csvPath + ",begin from row:" + beginRow);
+		return result;
+	}
+	public static List<String[]> getListArrayFromCsvPath(FileMapTableBean fileMapTableBean,FunctionHelper helper) {
+		List<String[]> result = new ArrayList<>();
+		String csvPath = fileMapTableBean.getFileName();
+		int beginRow = Integer.parseInt(fileMapTableBean.getBeginRow());
+
+		logger.info("Get parameters from path:" + csvPath + ",begin from " + beginRow);
+		try (BufferedReader reader = new BufferedReader(
+				new InputStreamReader(new FileInputStream(new File(csvPath)), fileMapTableBean.getEncoding()));) {
+			String string = null;
+			int count = 0;
+			while ((string = reader.readLine()) != null) {
+				count++;
+				String[] arr = getCsvLine(string,fileMapTableBean.getDelimiter());
+				if (beginRow > count || isInvalidLine(arr, fileMapTableBean)) {
+					continue;
+				}
+				helper.convert2CorrectArray(arr);
+				if (CommonUtil.isNotEmpty(arr)) {
+					logger.info("File parameters:" + Arrays.toString(arr));
+					result.add(arr);
+				}
+			}
+		} catch (IOException e) {
+			logger.error(Constants.IO_EXCEPTION, e);
+		} catch (FunctionException e) {
+			logger.error(e);
+		}
+		logger.info("Finish getting parameters from path:" + csvPath + ",begin from row:" + beginRow);
+		return result;
+	}
+
+	
+	public static boolean isInvalidLine(String[] arr, FileMapTableBean fileMapTableBean) {
+		boolean flag = false;
+		List<Integer> indexes = getIndex(fileMapTableBean);
+		int size = Collections.max(indexes);
+		if (CommonUtil.isEmptyArray(arr) || arr.length < size) {
+			return true;
+		}
+		for (int i = 0; i < indexes.size(); i++) {
+			int index = indexes.get(i) - 1;
+			arr[index] = StringUtils.trimToEmpty(arr[index]);
+		}
+		return flag;
+	}
+
+	private CsvHelper() {
+	}
+}
